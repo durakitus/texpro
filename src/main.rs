@@ -83,14 +83,14 @@ enum Commands {
 }
 
 fn validate_input(file_path: &Path, expect_file: bool) -> Result<()> {
-    let metadata = fs::metadata(file_path)
-        .with_context(|| format!("texpro: Cannot access '{:?}'", file_path))?;
+    let metadata =
+        fs::metadata(file_path).with_context(|| format!("Cannot access '{:?}'", file_path))?;
 
     if expect_file && !metadata.is_file() {
-        return Err(anyhow!("texpro: '{:?}' is not a regular file", file_path));
+        return Err(anyhow!("'{:?}' is not a regular file", file_path));
     }
     if !expect_file && !metadata.is_dir() {
-        return Err(anyhow!("texpro: '{:?}' is not a directory", file_path));
+        return Err(anyhow!("'{:?}' is not a directory", file_path));
     }
     Ok(())
 }
@@ -105,19 +105,16 @@ fn is_plain_text(file_path: &Path) -> bool {
     let n = file.read(&mut buffer).unwrap_or(0);
     if n == 0 {
         return true;
-    } // Empty files are often treated as text
+    }
 
     let bytes = &buffer[..n];
 
-    // Simplified 'file' utility logic:
-    // If it contains a NULL byte or non-visual control characters (excluding tab/newline),
-    // it's likely binary.
     for &b in bytes {
         if b == 0 {
             return false;
-        } // Null byte is a definitive binary signal
+        }
         if b < 7 || (b > 13 && b < 32) {
-            return false; // Non-whitespace control characters
+            return false;
         }
     }
     true
@@ -125,10 +122,7 @@ fn is_plain_text(file_path: &Path) -> bool {
 
 fn read_file(file_path: &Path) -> Result<Vec<String>> {
     if !is_plain_text(file_path) {
-        return Err(anyhow!(
-            "texpro: '{:?}' is not a plain text file",
-            file_path
-        ));
+        return Err(anyhow!("'{:?}' is not a plain text file", file_path));
     }
     let file = File::open(file_path).context("Failed to open file")?;
     let buf_reader = io::BufReader::new(file);
@@ -209,7 +203,7 @@ fn compare_files(file_1_path: &Path, file_2_path: &Path) -> Result<()> {
 
 fn search_in_directory(dir_path: &Path, regex_pattern: Arc<Regex>) -> Result<()> {
     let entries = fs::read_dir(dir_path)
-        .with_context(|| format!("texpro: Error reading directory {:?}", dir_path))?;
+        .with_context(|| format!("Error reading directory {:?}", dir_path))?;
 
     let file_paths: Vec<_> = entries
         .filter_map(|entry| entry.ok())
@@ -278,8 +272,7 @@ fn replace_text(
     let mut temp_file_path = file_path.to_path_buf();
     temp_file_path.set_extension("tmp");
 
-    let mut temp_file =
-        File::create(&temp_file_path).context("texpro: Error creating temporary file")?;
+    let mut temp_file = File::create(&temp_file_path).context("Error creating temporary file")?;
 
     let mut replacement_count: usize = 0;
     for original_line in file_lines {
@@ -297,7 +290,7 @@ fn replace_text(
         .inspect_err(|_e| {
             let _ = fs::remove_file(&temp_file_path);
         })
-        .context("texpro: Error finalizing replacement")?;
+        .context("Error finalizing replacement")?;
 
     println!("File modified in place: {:?}", file_path);
     println!("{} replacements made.", replacement_count);
@@ -332,7 +325,7 @@ fn format_text(file_lines: &[String], format_option: &str) {
                 println!("{}", line.to_lowercase());
             }
         }
-        _ => eprintln!("texpro: Unsupported format option. Use uppercase or lowercase."),
+        _ => eprintln!("Unsupported format option. Use uppercase or lowercase."),
     }
 }
 
@@ -358,7 +351,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Search { file_path, pattern } => {
             let regex = Regex::new(&pattern)
-                .with_context(|| format!("texpro: Invalid regex pattern {}", pattern))?;
+                .with_context(|| format!("Invalid regex pattern {}", pattern))?;
             validate_input(&file_path, true)?;
             let lines = read_file(&file_path)?;
             search_patterns(&lines, &regex);
@@ -373,13 +366,13 @@ fn main() -> Result<()> {
         }
         Commands::Directory { dir_path, pattern } => {
             let regex = Regex::new(&pattern)
-                .with_context(|| format!("texpro: Invalid regex pattern {}", pattern))?;
+                .with_context(|| format!("Invalid regex pattern {}", pattern))?;
             validate_input(&dir_path, false)?;
             search_in_directory(&dir_path, Arc::new(regex))?;
         }
         Commands::Extract { file_path, pattern } => {
             let regex = Regex::new(&pattern)
-                .with_context(|| format!("texpro: Invalid regex pattern {}", pattern))?;
+                .with_context(|| format!("Invalid regex pattern {}", pattern))?;
             validate_input(&file_path, true)?;
             let lines = read_file(&file_path)?;
             extract_text(&lines, &regex);
@@ -390,7 +383,7 @@ fn main() -> Result<()> {
             replacement,
         } => {
             let regex = Regex::new(&pattern)
-                .with_context(|| format!("texpro: Invalid regex pattern {}", pattern))?;
+                .with_context(|| format!("Invalid regex pattern {}", pattern))?;
             validate_input(&file_path, true)?;
             let lines = read_file(&file_path)?;
             replace_text(&lines, &file_path, &regex, &replacement)?;
@@ -413,7 +406,7 @@ fn main() -> Result<()> {
             validation_pattern,
         } => {
             let regex = Regex::new(&validation_pattern)
-                .with_context(|| format!("texpro: Invalid regex pattern {}", validation_pattern))?;
+                .with_context(|| format!("Invalid regex pattern {}", validation_pattern))?;
             validate_input(&file_path, true)?;
             let lines = read_file(&file_path)?;
             validate_text(&lines, &regex);
